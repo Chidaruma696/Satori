@@ -71,6 +71,22 @@ a {
   padding-top: 8vh;
 }
 
+.view.start {
+  border: 2px dashed transparent;
+  border-radius: 0.75rem;
+  padding-bottom: 2rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.view.start.drag {
+  border-color: var(--accent-2);
+  background: var(--panel);
+}
+
+.drop-hint {
+  font-size: 0.9rem;
+}
+
 .lead {
   font-size: 1.25rem;
   margin: 0;

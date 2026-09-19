@@ -78,6 +78,13 @@ function startView(error?: string): HTMLElement {
   const audio = el('input', { type: 'checkbox', checked: true });
   const supported = canRecord();
   const start = button(t('Start recording'), () => startRecording(audio.checked), { primary: true, disabled: !supported });
+  // A video from the disk goes straight to the editor: trim, crop or convert without recording.
+  const picker = el('input', { type: 'file', accept: 'video/*,.mkv,.mov,.webm,.mp4', hidden: true });
+  picker.addEventListener('change', () => {
+    const file = picker.files?.[0];
+    if (file) openFile(file);
+  });
+  const open = button(t('Open a video file'), () => picker.click());
   return el(
     'section',
     { class: 'view start' },
@@ -86,10 +93,45 @@ function startView(error?: string): HTMLElement {
     supported
       ? el('label', { class: 'check' }, audio, ' ', t('Capture system audio when the browser offers it'))
       : el('p', { class: 'error' }, t('This browser cannot record the screen. Use a desktop Chrome, Edge, Firefox or Safari.')),
-    start,
+    el('div', { class: 'row' }, start, open, picker),
+    el('p', { class: 'muted drop-hint' }, t('Or drop a video file here to trim, crop or convert it.')),
     error ? el('p', { class: 'error' }, `${t('Something went wrong:')} ${error}`) : null,
   );
 }
+
+// ---------------------------------------------------------------- open a file
+
+// Unlike a fresh recording, a file from the disk already has its duration and
+// seek index, so there is nothing to remux: probe it and open the editor.
+async function openFile(file: File) {
+  if (state.name !== 'start') return;
+  setState({ name: 'processing', message: t('Opening the file…'), progress: 0 });
+  try {
+    const info = await probe(file);
+    setState({ name: 'editing', clip: { blob: file, url: URL.createObjectURL(file), info }, edit: null });
+  } catch {
+    setState({ name: 'start', error: t('That file is not a video this browser can read.') });
+  }
+}
+
+// Dropping anywhere on the page opens the file; the browser would otherwise navigate to it.
+let dragDepth = 0;
+const dragClass = (on: boolean) => document.querySelector('.view.start')?.classList.toggle('drag', on);
+document.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  if (state.name === 'start' && ++dragDepth === 1) dragClass(true);
+});
+document.addEventListener('dragleave', () => {
+  if (state.name === 'start' && --dragDepth === 0) dragClass(false);
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  dragClass(false);
+  const file = e.dataTransfer?.files[0];
+  if (file && state.name === 'start') openFile(file);
+});
 
 async function startRecording(withAudio: boolean) {
   let stream: MediaStream;

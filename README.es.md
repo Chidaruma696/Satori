@@ -25,7 +25,7 @@ Está inspirado en [gifcap](https://github.com/joaomoreno/gifcap), que demostró
 
 ## 🚀 Úsalo
 
-Abre la página, pulsa **Empezar a grabar**, elige una pantalla o ventana, pulsa **Detener**.
+Abre la página, pulsa **Empezar a grabar**, elige una pantalla o ventana, pulsa **Detener**. O sáltate la grabación: pulsa **Abrir un vídeo** (o suelta uno en la página) para recortar, encuadrar o convertir algo que ya tengas.
 
 Después:
 
@@ -75,7 +75,6 @@ La rama `main` se despliega en GitHub Pages con `.github/workflows/pages.yml`.
 
 ## 🗺️ Hoja de ruta
 
-- Recomprimir un archivo de vídeo que arrastres a la página (bitrate, resolución, cuadros por segundo) sin grabar.
 - WebP animado y APNG.
 - ffmpeg.wasm como respaldo opcional para los formatos que el navegador no sepa codificar.
 

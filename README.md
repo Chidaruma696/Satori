@@ -25,7 +25,7 @@ It was inspired by [gifcap](https://github.com/joaomoreno/gifcap), which proved 
 
 ## 🚀 Use it
 
-Open the page, press **Start recording**, pick a screen or window, press **Stop**.
+Open the page, press **Start recording**, pick a screen or window, press **Stop**. Or skip the recording: press **Open a video file** (or drop one on the page) to trim, crop or convert something you already have.
 
 Then:
 
@@ -75,7 +75,6 @@ The `main` branch deploys to GitHub Pages through `.github/workflows/pages.yml`.
 
 ## 🗺️ Roadmap
 
-- Recompress a video file you drop on the page (bitrate, resolution, frame rate) without recording.
 - Animated WebP and APNG.
 - ffmpeg.wasm as an optional fallback for formats the browser cannot encode.
 
