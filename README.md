@@ -17,7 +17,7 @@
 
 ## 🗺️ What it is
 
-Satori is a static web page that records your screen (or one window), lets you trim and crop the recording, and exports it as **MP4**, **WebM** or **GIF**. Nothing is installed and nothing is uploaded: the browser captures, encodes and writes the file on your machine. It works as a PWA, so it can sit in your app list.
+Satori is a static web page that records your screen (or one window), lets you trim and crop the recording, and exports it as **MP4**, **WebM** or **GIF**. Nothing is installed and nothing is uploaded: the browser captures, encodes and writes the file on your machine. It works as a PWA, so it can sit in your app list. The interface follows your browser's language: English, Spanish, German, French, Italian, Portuguese, Japanese or Russian.
 
 It was inspired by [gifcap](https://github.com/joaomoreno/gifcap), which proved that a screen-to-GIF tool can live entirely in the browser. Satori starts from the same idea with what browsers offer today: the recording is compressed as it happens (`MediaRecorder`), so a long capture takes megabytes instead of gigabytes of RAM, and video exports go through the browser's own encoders (WebCodecs) instead of a compiled encoder.
 
@@ -53,7 +53,7 @@ src/
 │                 conversion with trim and crop (WebCodecs), GIF via CanvasSink + gifenc
 ├── preview.ts    the editor: playback inside the trim, sliders, drag-to-crop overlay, options
 ├── ui.ts         DOM helpers, time and size formatting
-└── i18n.ts       English in the code, Spanish from a table (follows the browser language)
+└── i18n.ts       English in the code, seven more languages from typed tables (follows the browser language)
 ```
 
 - **No framework.** Plain DOM with a small `el()` helper; every state renders its own view.
