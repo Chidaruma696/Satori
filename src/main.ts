@@ -1,8 +1,8 @@
-// Satori: record the screen, edit, export as MP4, WebM or GIF. Everything in the browser.
+// Satori: record the screen, edit, export as MP4, WebM, GIF, APNG or WebP. Everything in the browser.
 // A small state machine; each state renders its own view into #app.
 
 import './style.css';
-import { exportGif, exportVideo, probe, remux, type Edit, type ExportResult, type MediaInfo } from './export';
+import { exportAnimation, exportVideo, probe, remux, type Edit, type ExportResult, type MediaInfo } from './export';
 import { t } from './i18n';
 import { renderPreview, type ExportChoice } from './preview';
 import { Recorder, canRecord, startCapture } from './record';
@@ -88,7 +88,7 @@ function startView(error?: string): HTMLElement {
   return el(
     'section',
     { class: 'view start' },
-    el('p', { class: 'lead' }, t('Record your screen. Export it as MP4, WebM or GIF.')),
+    el('p', { class: 'lead' }, t('Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.')),
     el('p', { class: 'muted' }, t('Everything happens in your browser: nothing is uploaded anywhere.')),
     supported
       ? el('label', { class: 'check' }, audio, ' ', t('Capture system audio when the browser offers it'))
@@ -207,8 +207,8 @@ async function runExport(from: Extract<State, { name: 'editing' }>, edit: Edit, 
   setState({ name: 'exporting', clip: from.clip, edit, choice, progress: 0, cancel });
   try {
     const result =
-      choice.kind === 'gif'
-        ? await exportGif(from.clip.blob, from.clip.info, edit, choice.fps, choice.maxWidth, progress, () => cancelled)
+      choice.kind === 'animation'
+        ? await exportAnimation(from.clip.blob, from.clip.info, choice.format, choice, edit, progress, () => cancelled)
         : await exportVideo(from.clip.blob, from.clip.info, choice.format, choice.quality, edit, progress);
     if (cancelled) return;
     setState({ name: 'result', clip: from.clip, edit, choice, result, url: URL.createObjectURL(result.blob) });
@@ -223,16 +223,19 @@ async function runExport(from: Extract<State, { name: 'editing' }>, edit: Edit, 
 // ---------------------------------------------------------------- result
 
 function resultView(s: Extract<State, { name: 'result' }>): HTMLElement {
-  const isGif = s.choice.kind === 'gif';
-  const ext = s.choice.kind === 'gif' ? 'gif' : s.choice.format;
-  const media = isGif ? el('img', { src: s.url, alt: 'GIF' }) : el('video', { src: s.url, controls: true, playsinline: true });
+  const format = s.choice.format;
+  const label = format === 'webp' ? 'WebP' : format.toUpperCase();
+  // An APNG is a PNG to everything that does not animate it; .png opens everywhere.
+  const ext = format === 'apng' ? 'png' : format;
+  const media =
+    s.choice.kind === 'animation' ? el('img', { src: s.url, alt: label }) : el('video', { src: s.url, controls: true, playsinline: true });
   const seconds = s.edit.trim.end - s.edit.trim.start;
   const download = el('a', { class: 'btn primary', href: s.url, download: `Satori ${fileStamp()}.${ext}` }, t('Download'));
   return el(
     'section',
     { class: 'view result' },
     el('div', { class: 'stage' }, media),
-    el('p', { class: 'muted' }, `${ext.toUpperCase()} · ${fmtSize(s.result.blob.size)} · ${seconds.toFixed(1)} ${t('seconds')}`),
+    el('p', { class: 'muted' }, `${label} · ${fmtSize(s.result.blob.size)} · ${seconds.toFixed(1)} ${t('seconds')}`),
     ...s.result.warnings.map((w) => el('p', { class: 'warn' }, t(w))),
     el(
       'div',

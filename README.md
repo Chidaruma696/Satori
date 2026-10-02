@@ -4,7 +4,7 @@
 
 # ◉ Satori
 
-**Record your screen and export it as MP4, WebM or GIF. Entirely in the browser.**
+**Record your screen and export it as MP4, WebM, GIF, APNG or animated WebP. Entirely in the browser.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-c86dd7)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -17,7 +17,7 @@
 
 ## 🗺️ What it is
 
-Satori is a static web page that records your screen (or one window), lets you trim and crop the recording, and exports it as **MP4**, **WebM** or **GIF**. Nothing is installed and nothing is uploaded: the browser captures, encodes and writes the file on your machine. It works as a PWA, so it can sit in your app list. The interface follows your browser's language: English, Spanish, German, French, Italian, Portuguese, Japanese or Russian.
+Satori is a static web page that records your screen (or one window), lets you trim and crop the recording, and exports it as **MP4**, **WebM**, **GIF**, **APNG** or **animated WebP**. Nothing is installed and nothing is uploaded: the browser captures, encodes and writes the file on your machine. It works as a PWA, so it can sit in your app list. The interface follows your browser's language: English, Spanish, German, French, Italian, Portuguese, Japanese or Russian.
 
 It was inspired by [gifcap](https://github.com/joaomoreno/gifcap), which proved that a screen-to-GIF tool can live entirely in the browser. Satori starts from the same idea with what browsers offer today: the recording is compressed as it happens (`MediaRecorder`), so a long capture takes megabytes instead of gigabytes of RAM, and video exports go through the browser's own encoders (WebCodecs) instead of a compiled encoder.
 
@@ -33,13 +33,13 @@ Then:
 |---|---|
 | **Trim** | Two sliders for start and end. Playback loops inside the selection. |
 | **Crop** | Drag a rectangle on the video. Double-click clears it. |
-| **Export** | MP4 or WebM in four qualities (original keeps the recording untouched when nothing was edited), or GIF at 5 to 20 frames per second scaled to a maximum width. |
+| **Export** | MP4 or WebM in four qualities (original keeps the recording untouched when nothing was edited), or an animation (GIF, APNG or WebP) at 5 to 20 frames per second scaled to a maximum width. GIF has 256 colours per frame; APNG keeps every colour, losslessly; WebP is lossy, in three qualities, and usually the smallest. |
 
 The result shows size and length, with **Download**, **Edit again** and **New recording**.
 
-**Audio.** When the browser offers to share system audio (Chrome and Edge on Windows and ChromeOS) it is captured and kept in MP4 and WebM. GIF has no sound.
+**Audio.** When the browser offers to share system audio (Chrome and Edge on Windows and ChromeOS) it is captured and kept in MP4 and WebM. The animations have no sound.
 
-**Browsers.** Chrome, Edge and Safari on the desktop for everything. Firefox records and exports WebM and GIF; MP4 needs an H.264 encoder that Firefox exposes only on some systems. Phones cannot record their screen from a web page.
+**Browsers.** Chrome, Edge and Safari on the desktop for everything except animated WebP, which Safari's canvas cannot write. Firefox records and exports WebM and the animations; MP4 needs an H.264 encoder that Firefox exposes only on some systems. Phones cannot record their screen from a web page.
 
 <br/>
 
@@ -50,7 +50,8 @@ src/
 ├── main.ts       state machine: start → recording → processing → editing → exporting → result
 ├── record.ts     getDisplayMedia + MediaRecorder (best WebM/MP4 codec the browser has)
 ├── export.ts     mediabunny: probe, remux (makes the fresh recording seekable), MP4/WebM
-│                 conversion with trim and crop (WebCodecs), GIF via CanvasSink + gifenc
+│                 conversion with trim and crop (WebCodecs), animation frames via CanvasSink
+├── animated.ts   APNG and animated WebP writers (only the changed rectangle per frame)
 ├── preview.ts    the editor: playback inside the trim, sliders, drag-to-crop overlay, options
 ├── ui.ts         DOM helpers, time and size formatting
 └── i18n.ts       English in the code, seven more languages from typed tables (follows the browser language)
@@ -58,7 +59,7 @@ src/
 
 - **No framework.** Plain DOM with a small `el()` helper; every state renders its own view.
 - **Remux first.** A file straight out of `MediaRecorder` has no duration or seek index, so `<video>` cannot scrub it. Satori rewrites the container once (packets copied, nothing re-encoded) and works from that.
-- **GIF.** Frames are pulled at the chosen rate through mediabunny's `CanvasSink` (which also crops and scales), identical consecutive frames are merged into a longer delay, and each frame gets its own 256-colour palette from gifenc.
+- **Animations.** Frames are pulled at the chosen rate through mediabunny's `CanvasSink` (which also crops and scales) and identical consecutive frames are merged into a longer delay. GIF: each frame gets its own 256-colour palette from gifenc. APNG and WebP: no browser has an encoder for either, so `animated.ts` writes the container itself and, after the first frame, stores only the rectangle that changed; APNG compresses with the browser's `CompressionStream`, WebP takes each rectangle from the canvas WebP encoder.
 - **Dependencies.** [mediabunny](https://mediabunny.dev) (MPL-2.0) for reading, writing and converting media; [gifenc](https://github.com/mattdesl/gifenc) (MIT) for GIF. Both are permissive, so Satori stays MIT.
 
 Development:
@@ -75,7 +76,6 @@ The `main` branch deploys to GitHub Pages through `.github/workflows/pages.yml`.
 
 ## 🗺️ Roadmap
 
-- Animated WebP and APNG.
 - ffmpeg.wasm as an optional fallback for formats the browser cannot encode.
 
 <br/>

@@ -1,6 +1,7 @@
 // Everything that reads or writes media files: probing, the remux that makes a
-// fresh MediaRecorder file seekable, and the three exports (MP4, WebM, GIF).
-// Video work goes through mediabunny (WebCodecs underneath); GIF through gifenc.
+// fresh MediaRecorder file seekable, and the exports (MP4, WebM, GIF, APNG, WebP).
+// Video work goes through mediabunny (WebCodecs underneath); GIF through gifenc;
+// APNG and animated WebP through the writers in animated.ts.
 
 import {
   BlobSource,
@@ -23,6 +24,7 @@ import {
   type VideoCodec,
 } from 'mediabunny';
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
+import { ApngWriter, WebpWriter } from './animated';
 
 export interface Rect {
   left: number;
@@ -163,84 +165,126 @@ export async function exportVideo(
   }
 }
 
-/** Two frames are identical when every pixel matches: the GIF then just holds the previous one longer. */
-function sameFrame(a: Uint8ClampedArray, b: Uint8ClampedArray | null): boolean {
-  if (!b || a.length !== b.length) return false;
+/** Two frames are identical when every pixel matches: the animation then just holds the previous one longer. */
+function sameFrame(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
+  if (a.length !== b.length) return false;
   const ua = new Uint32Array(a.buffer, a.byteOffset, a.length >> 2);
   const ub = new Uint32Array(b.buffer, b.byteOffset, b.length >> 2);
   for (let i = 0; i < ua.length; i++) if (ua[i] !== ub[i]) return false;
   return true;
 }
 
-export async function exportGif(
-  source: Blob,
-  info: MediaInfo,
+function animationSize(info: MediaInfo, edit: Edit, maxWidth: number) {
+  const srcW = edit.crop?.width ?? info.width;
+  const srcH = edit.crop?.height ?? info.height;
+  const scale = maxWidth > 0 && srcW > maxWidth ? maxWidth / srcW : 1;
+  return {
+    width: Math.max(2, Math.round(srcW * scale) & ~1),
+    height: Math.max(2, Math.round(srcH * scale) & ~1),
+  };
+}
+
+interface Still {
+  data: Uint8ClampedArray;
+  /** Milliseconds. */
+  delay: number;
+}
+
+// A still longer than this is split in two; APNG keeps delays in 16 bits.
+const MAX_DELAY = 60_000;
+
+/**
+ * The frames of an animation: pulled at `fps` through mediabunny's CanvasSink (which also
+ * crops and scales), with identical consecutive frames merged into one longer frame.
+ */
+async function* stills(
+  input: Input,
   edit: Edit,
   fps: number,
-  maxWidth: number,
+  size: { width: number; height: number },
+  onProgress: (p: number) => void,
+  cancelled: () => boolean,
+): AsyncGenerator<Still> {
+  const track = await input.getPrimaryVideoTrack();
+  if (!track) throw new Error('No video track');
+  const { width, height } = size;
+  const sink = new CanvasSink(track, {
+    width,
+    height,
+    fit: 'fill',
+    ...(edit.crop ? { crop: edit.crop } : {}),
+    poolSize: 2,
+  });
+  const step = 1 / fps;
+  const timestamps: number[] = [];
+  for (let ts = edit.trim.start; ts < edit.trim.end; ts += step) timestamps.push(ts);
+  if (timestamps.length === 0) timestamps.push(edit.trim.start);
+  const delay = Math.round(step * 1000);
+
+  let held: Still | null = null;
+  let done = 0;
+  for await (const wrapped of sink.canvasesAtTimestamps(timestamps)) {
+    if (cancelled()) throw new Error('cancelled');
+    done++;
+    if (wrapped) {
+      const ctx = wrapped.canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+      const data = ctx.getImageData(0, 0, width, height).data;
+      if (held && held.delay + delay <= MAX_DELAY && sameFrame(data, held.data)) {
+        held.delay += delay;
+      } else {
+        if (held) yield held;
+        held = { data, delay };
+      }
+    }
+    onProgress(done / timestamps.length);
+    if (done % 3 === 0) await new Promise((r) => setTimeout(r, 0));
+  }
+  if (held) yield held;
+}
+
+export type AnimationFormat = 'gif' | 'apng' | 'webp';
+
+export interface AnimationOptions {
+  fps: number;
+  maxWidth: number;
+  /** Only WebP uses it; GIF and APNG have no quality knob. */
+  quality: VideoQuality;
+}
+
+const WEBP_QUALITY = { original: 1, high: 0.9, medium: 0.75, low: 0.5 };
+
+export async function exportAnimation(
+  source: Blob,
+  info: MediaInfo,
+  format: AnimationFormat,
+  opts: AnimationOptions,
+  edit: Edit,
   onProgress: (p: number) => void,
   cancelled: () => boolean,
 ): Promise<ExportResult> {
   const input = openInput(source);
   try {
-    const track = await input.getPrimaryVideoTrack();
-    if (!track) throw new Error('No video track');
-    const srcW = edit.crop?.width ?? info.width;
-    const srcH = edit.crop?.height ?? info.height;
-    const scale = maxWidth > 0 && srcW > maxWidth ? maxWidth / srcW : 1;
-    const width = Math.max(2, Math.round(srcW * scale) & ~1);
-    const height = Math.max(2, Math.round(srcH * scale) & ~1);
-
-    const sink = new CanvasSink(track, {
-      width,
-      height,
-      fit: 'fill',
-      ...(edit.crop ? { crop: edit.crop } : {}),
-      poolSize: 2,
-    });
-    const step = 1 / fps;
-    const timestamps: number[] = [];
-    for (let ts = edit.trim.start; ts < edit.trim.end; ts += step) timestamps.push(ts);
-    if (timestamps.length === 0) timestamps.push(edit.trim.start);
-    const delay = Math.round(step * 1000);
-
-    const gif = GIFEncoder();
-    let previous: Uint8ClampedArray | null = null;
-    let pending = 0; // delay carried by dropped duplicate frames
-    let written = 0;
-    let done = 0;
-    let lastIndex: Uint8Array | null = null;
-    let lastPalette: number[][] | null = null;
-
-    const flush = (extra: number) => {
-      if (lastIndex && lastPalette) {
-        gif.writeFrame(lastIndex, width, height, { palette: lastPalette, delay: delay + extra, repeat: written === 0 ? 0 : undefined });
-        written++;
+    const size = animationSize(info, edit, opts.maxWidth);
+    const frames = stills(input, edit, opts.fps, size, onProgress, cancelled);
+    if (format === 'gif') {
+      const gif = GIFEncoder();
+      let first = true;
+      for await (const s of frames) {
+        // Each frame gets its own 256-colour palette.
+        const palette = quantize(s.data, 256, { format: 'rgb565' });
+        const index = applyPalette(s.data, palette, 'rgb565');
+        gif.writeFrame(index, size.width, size.height, { palette, delay: s.delay, repeat: first ? 0 : undefined });
+        first = false;
       }
-    };
-
-    for await (const wrapped of sink.canvasesAtTimestamps(timestamps)) {
-      if (cancelled()) throw new Error('cancelled');
-      done++;
-      if (!wrapped) continue;
-      const ctx = wrapped.canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-      const data = ctx.getImageData(0, 0, width, height).data;
-      if (sameFrame(data, previous)) {
-        pending += delay;
-      } else {
-        flush(pending);
-        pending = 0;
-        const palette = quantize(data, 256, { format: 'rgb565' });
-        lastIndex = applyPalette(data, palette, 'rgb565');
-        lastPalette = palette;
-        previous = data;
-      }
-      onProgress(done / timestamps.length);
-      if (done % 3 === 0) await new Promise((r) => setTimeout(r, 0));
+      gif.finish();
+      return { blob: new Blob([gif.bytesView() as BlobPart], { type: 'image/gif' }), warnings: [] };
     }
-    flush(pending);
-    gif.finish();
-    return { blob: new Blob([gif.bytesView() as BlobPart], { type: 'image/gif' }), warnings: [] };
+    const writer =
+      format === 'apng'
+        ? new ApngWriter(size.width, size.height)
+        : new WebpWriter(size.width, size.height, WEBP_QUALITY[opts.quality]);
+    for await (const s of frames) await writer.add(s.data, s.delay);
+    return { blob: writer.finish(), warnings: [] };
   } finally {
     input.dispose();
   }

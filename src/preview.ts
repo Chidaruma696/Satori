@@ -1,12 +1,15 @@
 // The editor: playback within the trim, trim handles, drag-to-crop overlay, export options.
 
-import type { Edit, MediaInfo, Rect, VideoQuality } from './export';
+import type { AnimationFormat, Edit, MediaInfo, Rect, VideoFormat, VideoQuality } from './export';
 import { t } from './i18n';
 import { button, el, fmtTime } from './ui';
 
 export type ExportChoice =
-  | { kind: 'video'; format: 'mp4' | 'webm'; quality: VideoQuality }
-  | { kind: 'gif'; fps: number; maxWidth: number };
+  | { kind: 'video'; format: VideoFormat; quality: VideoQuality }
+  | { kind: 'animation'; format: AnimationFormat; fps: number; maxWidth: number; quality: VideoQuality };
+
+const VIDEO_FORMATS: VideoFormat[] = ['mp4', 'webm'];
+const ANIMATION_FORMATS: AnimationFormat[] = ['gif', 'apng', 'webp'];
 
 export interface PreviewHandlers {
   onExport(edit: Edit, choice: ExportChoice): void;
@@ -119,11 +122,16 @@ export function renderPreview(url: string, info: MediaInfo, initial: Edit | null
   new ResizeObserver(syncOverlay).observe(video);
 
   // ---- export options
-  const formatSel = el('select', {}, ...['mp4', 'webm', 'gif'].map((f) => el('option', { value: f }, f.toUpperCase())));
+  const formatSel = el(
+    'select',
+    {},
+    ...[...VIDEO_FORMATS, ...ANIMATION_FORMATS].map((f) => el('option', { value: f }, f === 'webp' ? 'WebP' : f.toUpperCase())),
+  );
+  const originalOpt = el('option', { value: 'original' }, t('Original (no re-encoding)'));
   const qualitySel = el(
     'select',
     {},
-    el('option', { value: 'original' }, t('Original (no re-encoding)')),
+    originalOpt,
     el('option', { value: 'high' }, t('High')),
     el('option', { value: 'medium', selected: true }, t('Medium')),
     el('option', { value: 'low' }, t('Low')),
@@ -137,20 +145,24 @@ export function renderPreview(url: string, info: MediaInfo, initial: Edit | null
   );
   const videoOpts = el('label', {}, t('Quality'), qualitySel);
   const gifOpts = el('span', { class: 'gif-opts' }, el('label', {}, t('Frames per second'), fpsSel), el('label', {}, t('Max width'), widthSel));
+  // Video: quality. GIF and APNG: rate and width. WebP: both, minus "original".
   const syncFormat = () => {
-    const gif = formatSel.value === 'gif';
-    videoOpts.hidden = gif;
-    gifOpts.hidden = !gif;
+    const animation = (ANIMATION_FORMATS as string[]).includes(formatSel.value);
+    const webp = formatSel.value === 'webp';
+    videoOpts.hidden = animation && !webp;
+    gifOpts.hidden = !animation;
+    originalOpt.disabled = webp;
+    if (webp && qualitySel.value === 'original') qualitySel.value = 'high';
   };
   formatSel.addEventListener('change', syncFormat);
   syncFormat();
 
   const exportBtn = button(t('Export'), () => {
     video.pause();
-    const choice: ExportChoice =
-      formatSel.value === 'gif'
-        ? { kind: 'gif', fps: Number(fpsSel.value), maxWidth: Number(widthSel.value) }
-        : { kind: 'video', format: formatSel.value as 'mp4' | 'webm', quality: qualitySel.value as VideoQuality };
+    const quality = qualitySel.value as VideoQuality;
+    const choice: ExportChoice = (ANIMATION_FORMATS as string[]).includes(formatSel.value)
+      ? { kind: 'animation', format: formatSel.value as AnimationFormat, fps: Number(fpsSel.value), maxWidth: Number(widthSel.value), quality }
+      : { kind: 'video', format: formatSel.value as VideoFormat, quality };
     handlers.onExport({ trim: { ...edit.trim }, crop: edit.crop ? { ...edit.crop } : null }, choice);
   }, { primary: true });
   const discardBtn = button(t('Discard'), () => {

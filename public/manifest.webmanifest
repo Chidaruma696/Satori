@@ -1,7 +1,7 @@
 {
   "name": "Satori",
   "short_name": "Satori",
-  "description": "Record your screen and export it as MP4, WebM or GIF, entirely in the browser.",
+  "description": "Record your screen and export it as MP4, WebM, GIF, APNG or WebP, entirely in the browser.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#1b1523",

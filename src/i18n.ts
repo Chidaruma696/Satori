@@ -3,7 +3,7 @@
 // Adding a language: a new table with the same keys, plus its code in `tables`.
 
 const es = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Graba tu pantalla. Expórtala como MP4, WebM o GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Graba tu pantalla. Expórtala como MP4, WebM, GIF, APNG o WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Todo ocurre en tu navegador: no se sube nada a ningún sitio.',
   'Start recording': 'Empezar a grabar',
   'Open a video file': 'Abrir un vídeo',
@@ -43,6 +43,7 @@ const es = {
   'New recording': 'Nueva grabación',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'El audio no se pudo conservar en este formato en este navegador; el archivo va sin sonido.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Este navegador no puede codificar vídeo para ese formato. Prueba WebM o GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Este navegador no puede codificar WebP. Prueba APNG o GIF.',
   'Something went wrong:': 'Algo salió mal:',
   'Made by Chidaruma': 'Hecho por Chidaruma',
   'Like it? Star it on GitHub.': '¿Te gusta? Deja una estrella en GitHub.',
@@ -53,7 +54,7 @@ const es = {
 type Table = Record<keyof typeof es, string>;
 
 const de: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Nimm deinen Bildschirm auf. Exportiere ihn als MP4, WebM oder GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Nimm deinen Bildschirm auf. Exportiere ihn als MP4, WebM, GIF, APNG oder WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Alles passiert in deinem Browser: nichts wird irgendwohin hochgeladen.',
   'Start recording': 'Aufnahme starten',
   'Open a video file': 'Videodatei öffnen',
@@ -93,6 +94,7 @@ const de: Table = {
   'New recording': 'Neue Aufnahme',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'Der Ton ließ sich in diesem Format mit diesem Browser nicht behalten; die Datei hat keinen Ton.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Dieser Browser kann für dieses Format kein Video kodieren. Versuch es mit WebM oder GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Dieser Browser kann kein WebP kodieren. Versuch es mit APNG oder GIF.',
   'Something went wrong:': 'Etwas ist schiefgelaufen:',
   'Made by Chidaruma': 'Gemacht von Chidaruma',
   'Like it? Star it on GitHub.': 'Gefällt es dir? Gib ihm einen Stern auf GitHub.',
@@ -101,7 +103,7 @@ const de: Table = {
 };
 
 const fr: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Enregistrez votre écran. Exportez-le en MP4, WebM ou GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Enregistrez votre écran. Exportez-le en MP4, WebM, GIF, APNG ou WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Tout se passe dans votre navigateur : rien n’est envoyé nulle part.',
   'Start recording': 'Démarrer l’enregistrement',
   'Open a video file': 'Ouvrir une vidéo',
@@ -141,6 +143,7 @@ const fr: Table = {
   'New recording': 'Nouvel enregistrement',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'Le son n’a pas pu être conservé dans ce format avec ce navigateur ; le fichier est muet.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Ce navigateur ne peut pas encoder de vidéo dans ce format. Essayez WebM ou GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Ce navigateur ne peut pas encoder de WebP. Essayez APNG ou GIF.',
   'Something went wrong:': 'Une erreur s’est produite :',
   'Made by Chidaruma': 'Fait par Chidaruma',
   'Like it? Star it on GitHub.': 'Ça vous plaît ? Mettez une étoile sur GitHub.',
@@ -149,7 +152,7 @@ const fr: Table = {
 };
 
 const it: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Registra lo schermo. Esportalo in MP4, WebM o GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Registra lo schermo. Esportalo in MP4, WebM, GIF, APNG o WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Tutto avviene nel tuo browser: non viene caricato nulla da nessuna parte.',
   'Start recording': 'Avvia registrazione',
   'Open a video file': 'Apri un video',
@@ -189,6 +192,7 @@ const it: Table = {
   'New recording': 'Nuova registrazione',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'Non è stato possibile mantenere l’audio in questo formato con questo browser; il file è senza suono.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Questo browser non può codificare video in quel formato. Prova WebM o GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Questo browser non può codificare WebP. Prova APNG o GIF.',
   'Something went wrong:': 'Qualcosa è andato storto:',
   'Made by Chidaruma': 'Fatto da Chidaruma',
   'Like it? Star it on GitHub.': 'Ti piace? Lascia una stella su GitHub.',
@@ -197,7 +201,7 @@ const it: Table = {
 };
 
 const pt: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Grave sua tela. Exporte como MP4, WebM ou GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Grave sua tela. Exporte como MP4, WebM, GIF, APNG ou WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Tudo acontece no seu navegador: nada é enviado para lugar nenhum.',
   'Start recording': 'Começar a gravar',
   'Open a video file': 'Abrir um vídeo',
@@ -237,6 +241,7 @@ const pt: Table = {
   'New recording': 'Nova gravação',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'Não foi possível manter o áudio neste formato neste navegador; o arquivo ficou sem som.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Este navegador não consegue codificar vídeo nesse formato. Tente WebM ou GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Este navegador não consegue codificar WebP. Tente APNG ou GIF.',
   'Something went wrong:': 'Algo deu errado:',
   'Made by Chidaruma': 'Feito por Chidaruma',
   'Like it? Star it on GitHub.': 'Gostou? Dê uma estrela no GitHub.',
@@ -245,7 +250,7 @@ const pt: Table = {
 };
 
 const ja: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': '画面を録画して、MP4・WebM・GIF で書き出します。',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': '画面を録画して、MP4・WebM・GIF・APNG・WebP で書き出します。',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'すべてブラウザの中で行われます。どこにもアップロードされません。',
   'Start recording': '録画を開始',
   'Open a video file': '動画ファイルを開く',
@@ -285,6 +290,7 @@ const ja: Table = {
   'New recording': '新しい録画',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'このブラウザではこの形式で音声を残せませんでした。ファイルは無音です。',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'このブラウザはその形式で動画をエンコードできません。WebM か GIF をお試しください。',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'このブラウザは WebP をエンコードできません。APNG か GIF をお試しください。',
   'Something went wrong:': 'エラーが発生しました：',
   'Made by Chidaruma': '制作：Chidaruma',
   'Like it? Star it on GitHub.': '気に入ったら GitHub でスターを。',
@@ -293,7 +299,7 @@ const ja: Table = {
 };
 
 const ru: Table = {
-  'Record your screen. Export it as MP4, WebM or GIF.': 'Запишите экран. Сохраните его в MP4, WebM или GIF.',
+  'Record your screen. Export it as MP4, WebM, GIF, APNG or WebP.': 'Запишите экран. Сохраните его в MP4, WebM, GIF, APNG или WebP.',
   'Everything happens in your browser: nothing is uploaded anywhere.': 'Всё происходит в вашем браузере: ничего никуда не загружается.',
   'Start recording': 'Начать запись',
   'Open a video file': 'Открыть видео',
@@ -333,6 +339,7 @@ const ru: Table = {
   'New recording': 'Новая запись',
   'Audio could not be kept in this format on this browser; the file has no sound.': 'В этом браузере звук в этом формате сохранить не удалось; файл без звука.',
   'This browser cannot encode video for that format. Try WebM or GIF.': 'Этот браузер не может кодировать видео в этом формате. Попробуйте WebM или GIF.',
+  'This browser cannot encode WebP. Try APNG or GIF.': 'Этот браузер не может кодировать WebP. Попробуйте APNG или GIF.',
   'Something went wrong:': 'Что-то пошло не так:',
   'Made by Chidaruma': 'Сделал Chidaruma',
   'Like it? Star it on GitHub.': 'Нравится? Поставьте звезду на GitHub.',

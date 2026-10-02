@@ -4,7 +4,7 @@
 
 # ◉ Satori
 
-**Graba tu pantalla y expórtala como MP4, WebM o GIF. Todo en el navegador.**
+**Graba tu pantalla y expórtala como MP4, WebM, GIF, APNG o WebP animado. Todo en el navegador.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-c86dd7)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -17,7 +17,7 @@
 
 ## 🗺️ Qué es
 
-Satori es una página web estática que graba tu pantalla (o una ventana), te deja recortar el tiempo y el área, y exporta el resultado como **MP4**, **WebM** o **GIF**. No se instala nada y no se sube nada: el navegador captura, codifica y escribe el archivo en tu máquina. Funciona como PWA, así que puede vivir en tu lista de aplicaciones. La interfaz sigue el idioma de tu navegador: inglés, español, alemán, francés, italiano, portugués, japonés o ruso.
+Satori es una página web estática que graba tu pantalla (o una ventana), te deja recortar el tiempo y el área, y exporta el resultado como **MP4**, **WebM**, **GIF**, **APNG** o **WebP animado**. No se instala nada y no se sube nada: el navegador captura, codifica y escribe el archivo en tu máquina. Funciona como PWA, así que puede vivir en tu lista de aplicaciones. La interfaz sigue el idioma de tu navegador: inglés, español, alemán, francés, italiano, portugués, japonés o ruso.
 
 Está inspirado en [gifcap](https://github.com/joaomoreno/gifcap), que demostró que una herramienta de pantalla a GIF puede vivir entera en el navegador. Satori parte de la misma idea con lo que los navegadores ofrecen hoy: la grabación se comprime sobre la marcha (`MediaRecorder`), así que una captura larga ocupa megabytes en vez de gigabytes de RAM, y las exportaciones de vídeo pasan por los codificadores del propio navegador (WebCodecs) en lugar de un codificador compilado.
 
@@ -33,13 +33,13 @@ Después:
 |---|---|
 | **Recortar tiempo** | Dos deslizadores para inicio y fin. La reproducción se repite dentro de la selección. |
 | **Recortar área** | Arrastra un rectángulo sobre el vídeo. Doble clic lo quita. |
-| **Exportar** | MP4 o WebM en cuatro calidades (original deja la grabación intacta si no editaste nada), o GIF de 5 a 20 cuadros por segundo escalado a un ancho máximo. |
+| **Exportar** | MP4 o WebM en cuatro calidades (original deja la grabación intacta si no editaste nada), o una animación (GIF, APNG o WebP) de 5 a 20 cuadros por segundo escalada a un ancho máximo. El GIF tiene 256 colores por cuadro; el APNG conserva todos, sin pérdida; el WebP es con pérdida, en tres calidades, y suele ser el más ligero. |
 
 El resultado muestra tamaño y duración, con **Descargar**, **Volver a editar** y **Nueva grabación**.
 
-**Audio.** Cuando el navegador ofrece compartir el audio del sistema (Chrome y Edge en Windows y ChromeOS) se captura y se conserva en MP4 y WebM. El GIF no tiene sonido.
+**Audio.** Cuando el navegador ofrece compartir el audio del sistema (Chrome y Edge en Windows y ChromeOS) se captura y se conserva en MP4 y WebM. Las animaciones no tienen sonido.
 
-**Navegadores.** Chrome, Edge y Safari de escritorio para todo. Firefox graba y exporta WebM y GIF; el MP4 necesita un codificador H.264 que Firefox solo expone en algunos sistemas. Los teléfonos no pueden grabar su pantalla desde una página web.
+**Navegadores.** Chrome, Edge y Safari de escritorio para todo menos el WebP animado, que el canvas de Safari no sabe escribir. Firefox graba y exporta WebM y las animaciones; el MP4 necesita un codificador H.264 que Firefox solo expone en algunos sistemas. Los teléfonos no pueden grabar su pantalla desde una página web.
 
 <br/>
 
@@ -50,7 +50,8 @@ src/
 ├── main.ts       máquina de estados: inicio → grabando → procesando → editando → exportando → resultado
 ├── record.ts     getDisplayMedia + MediaRecorder (el mejor códec WebM/MP4 que tenga el navegador)
 ├── export.ts     mediabunny: sondeo, remux (hace navegable la grabación recién hecha), conversión
-│                 MP4/WebM con recortes (WebCodecs), GIF con CanvasSink + gifenc
+│                 MP4/WebM con recortes (WebCodecs), cuadros de las animaciones con CanvasSink
+├── animated.ts   escritores de APNG y WebP animado (solo el rectángulo que cambia en cada cuadro)
 ├── preview.ts    el editor: reproducción dentro del recorte, deslizadores, recorte por arrastre, opciones
 ├── ui.ts         ayudantes de DOM, formato de tiempo y tamaño
 └── i18n.ts       inglés en el código, siete idiomas más desde tablas tipadas (sigue el idioma del navegador)
@@ -58,7 +59,7 @@ src/
 
 - **Sin framework.** DOM puro con un pequeño `el()`; cada estado pinta su propia vista.
 - **Primero remux.** Un archivo recién salido de `MediaRecorder` no tiene duración ni índice, así que `<video>` no puede desplazarse por él. Satori reescribe el contenedor una vez (copia los paquetes, no recodifica) y trabaja a partir de ahí.
-- **GIF.** Los cuadros se extraen a la tasa elegida con el `CanvasSink` de mediabunny (que además recorta y escala), los cuadros consecutivos idénticos se funden en un retardo más largo, y cada cuadro recibe su propia paleta de 256 colores con gifenc.
+- **Animaciones.** Los cuadros se extraen a la tasa elegida con el `CanvasSink` de mediabunny (que además recorta y escala) y los cuadros consecutivos idénticos se funden en un retardo más largo. GIF: cada cuadro recibe su propia paleta de 256 colores con gifenc. APNG y WebP: ningún navegador trae codificador para ninguno de los dos, así que `animated.ts` escribe el contenedor él mismo y, después del primer cuadro, guarda solo el rectángulo que cambió; el APNG comprime con el `CompressionStream` del navegador y el WebP saca cada rectángulo del codificador WebP del canvas.
 - **Dependencias.** [mediabunny](https://mediabunny.dev) (MPL-2.0) para leer, escribir y convertir medios; [gifenc](https://github.com/mattdesl/gifenc) (MIT) para el GIF. Ambas son permisivas, así que Satori se queda en MIT.
 
 Desarrollo:
@@ -75,7 +76,6 @@ La rama `main` se despliega en GitHub Pages con `.github/workflows/pages.yml`.
 
 ## 🗺️ Hoja de ruta
 
-- WebP animado y APNG.
 - ffmpeg.wasm como respaldo opcional para los formatos que el navegador no sepa codificar.
 
 <br/>
