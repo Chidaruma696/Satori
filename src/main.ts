@@ -2,7 +2,9 @@
 // A small state machine; each state renders its own view into #app.
 
 import './style.css';
-import { exportAnimation, exportVideo, probe, remux, type Edit, type ExportResult, type MediaInfo } from './export';
+import { NoWebpEncoder } from './animated';
+import { NoEncoder, exportAnimation, exportVideo, probe, remux, type Edit, type ExportResult, type MediaInfo } from './export';
+import { cancelFfmpeg, exportWithFfmpeg, ffmpegReady, loadFfmpeg } from './ffmpeg';
 import { t } from './i18n';
 import { renderPreview, type ExportChoice } from './preview';
 import { Recorder, canRecord, startCapture } from './record';
@@ -19,7 +21,7 @@ type State =
   | { name: 'recording'; recorder: Recorder }
   | { name: 'processing'; message: string; progress: number }
   | { name: 'editing'; clip: Clip; edit: Edit | null }
-  | { name: 'exporting'; clip: Clip; edit: Edit; choice: ExportChoice; progress: number; cancel: () => void }
+  | { name: 'exporting'; clip: Clip; edit: Edit; choice: ExportChoice; message: string; progress: number; cancel: () => void }
   | { name: 'result'; clip: Clip; edit: Edit; choice: ExportChoice; result: ExportResult; url: string };
 
 const app = document.getElementById('app')!;
@@ -66,7 +68,7 @@ function body(): HTMLElement {
       });
     }
     case 'exporting':
-      return progressView(t('Exporting…'), state.progress, state.cancel);
+      return progressView(state.message, state.progress, state.cancel);
     case 'result':
       return resultView(state);
   }
@@ -195,25 +197,48 @@ function progressView(message: string, progress: number, cancel?: () => void): H
 
 // ---------------------------------------------------------------- export
 
+// Development only: ?ffmpeg in the address pretends the browser has no encoder, to try the fallback.
+const forceFallback = import.meta.env.DEV && new URLSearchParams(location.search).has('ffmpeg');
+
 async function runExport(from: Extract<State, { name: 'editing' }>, edit: Edit, choice: ExportChoice) {
   let cancelled = false;
+  let fallback = false;
   const cancel = () => {
     cancelled = true;
+    if (fallback) cancelFfmpeg();
     setState({ name: 'editing', clip: from.clip, edit });
   };
-  const progress = (p: number) => {
-    if (state.name === 'exporting' && !cancelled) setState({ ...state, progress: p });
+  const progress = (message: string) => (p: number) => {
+    if (state.name === 'exporting' && !cancelled) setState({ ...state, message, progress: p });
   };
-  setState({ name: 'exporting', clip: from.clip, edit, choice, progress: 0, cancel });
+  setState({ name: 'exporting', clip: from.clip, edit, choice, message: t('Exporting…'), progress: 0, cancel });
+
+  // The browser's own encoders first; when it has none for the format, ffmpeg.wasm if the user agrees.
+  const run = async (): Promise<ExportResult> => {
+    try {
+      if (forceFallback && (choice.kind === 'video' || choice.format === 'webp')) throw new NoEncoder();
+      return choice.kind === 'animation'
+        ? await exportAnimation(from.clip.blob, from.clip.info, choice.format, choice, edit, progress(t('Exporting…')), () => cancelled)
+        : await exportVideo(from.clip.blob, from.clip.info, choice.format, choice.quality, edit, progress(t('Exporting…')));
+    } catch (e) {
+      if (cancelled || !(e instanceof NoEncoder || e instanceof NoWebpEncoder)) throw e;
+      const ask = t('This browser has no encoder for that format. Download ffmpeg.wasm (about 32 MB, kept by the browser for next time) and encode with it?');
+      if (!ffmpegReady() && !confirm(ask)) throw e;
+      fallback = true;
+      const ffmpeg = await loadFfmpeg(progress(t('Downloading the encoder…')));
+      if (cancelled) throw new Error('cancelled');
+      progress(t('Exporting…'))(0);
+      const blob = await exportWithFfmpeg(ffmpeg, from.clip.blob, from.clip.info, choice, edit, progress(t('Exporting…')));
+      return { blob, warnings: [] };
+    }
+  };
   try {
-    const result =
-      choice.kind === 'animation'
-        ? await exportAnimation(from.clip.blob, from.clip.info, choice.format, choice, edit, progress, () => cancelled)
-        : await exportVideo(from.clip.blob, from.clip.info, choice.format, choice.quality, edit, progress);
+    const result = await run();
     if (cancelled) return;
     setState({ name: 'result', clip: from.clip, edit, choice, result, url: URL.createObjectURL(result.blob) });
   } catch (e) {
     if (cancelled) return;
+    console.error(e);
     const msg = (e as Error).message ?? String(e);
     setState({ name: 'editing', clip: from.clip, edit });
     alert(`${t('Something went wrong:')} ${t(msg)}`);

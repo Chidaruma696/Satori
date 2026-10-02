@@ -56,6 +56,13 @@ export interface ExportResult {
   warnings: string[];
 }
 
+/** Thrown when this browser has no encoder for the chosen video format; ffmpeg.ts can step in. */
+export class NoEncoder extends Error {
+  constructor() {
+    super('This browser cannot encode video for that format. Try WebM or GIF.');
+  }
+}
+
 // Only the containers a screen recording can come in; ALL_FORMATS would double the bundle.
 const FORMATS = [WEBM, MATROSKA, MP4, QTFF];
 
@@ -141,7 +148,7 @@ export async function exportVideo(
       const candidates: VideoCodec[] = format === 'mp4' ? ['avc', 'hevc', 'av1', 'vp9'] : ['vp9', 'av1', 'vp8'];
       const q = qualityOf(quality === 'original' ? 'high' : quality);
       const codec = await getFirstEncodableVideoCodec(candidates, { width, height, quality: q });
-      if (!codec) throw new Error('This browser cannot encode video for that format. Try WebM or GIF.');
+      if (!codec) throw new NoEncoder();
       video.codec = codec;
       video.quality = q;
       if (edit.crop) video.crop = edit.crop;
@@ -155,7 +162,7 @@ export async function exportVideo(
     if (info.hasAudio && conversion.discardedTracks.some((d) => d.track.type === 'audio')) {
       warnings.push('Audio could not be kept in this format on this browser; the file has no sound.');
     }
-    if (!conversion.isValid) throw new Error('This browser cannot encode video for that format. Try WebM or GIF.');
+    if (!conversion.isValid) throw new NoEncoder();
     conversion.onProgress = onProgress;
     await conversion.execute();
     const type = format === 'mp4' ? 'video/mp4' : 'video/webm';

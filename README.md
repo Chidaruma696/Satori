@@ -39,7 +39,7 @@ The result shows size and length, with **Download**, **Edit again** and **New re
 
 **Audio.** When the browser offers to share system audio (Chrome and Edge on Windows and ChromeOS) it is captured and kept in MP4 and WebM. The animations have no sound.
 
-**Browsers.** Chrome, Edge and Safari on the desktop for everything except animated WebP, which Safari's canvas cannot write. Firefox records and exports WebM and the animations; MP4 needs an H.264 encoder that Firefox exposes only on some systems. Phones cannot record their screen from a web page.
+**Browsers.** Chrome and Edge on the desktop do everything with their own encoders. Firefox has no MP4 encoder on most systems and Safari cannot write WebP; for those, Satori offers to download [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) (about 32 MB, once: the browser keeps it) and encodes with it instead. It is slower than the browser's own encoders, and its WebM is VP8. Phones cannot record their screen from a web page.
 
 <br/>
 
@@ -52,6 +52,7 @@ src/
 ├── export.ts     mediabunny: probe, remux (makes the fresh recording seekable), MP4/WebM
 │                 conversion with trim and crop (WebCodecs), animation frames via CanvasSink
 ├── animated.ts   APNG and animated WebP writers (only the changed rectangle per frame)
+├── ffmpeg.ts     the fallback: ffmpeg.wasm, downloaded only when the browser lacks an encoder
 ├── preview.ts    the editor: playback inside the trim, sliders, drag-to-crop overlay, options
 ├── ui.ts         DOM helpers, time and size formatting
 └── i18n.ts       English in the code, seven more languages from typed tables (follows the browser language)
@@ -60,7 +61,8 @@ src/
 - **No framework.** Plain DOM with a small `el()` helper; every state renders its own view.
 - **Remux first.** A file straight out of `MediaRecorder` has no duration or seek index, so `<video>` cannot scrub it. Satori rewrites the container once (packets copied, nothing re-encoded) and works from that.
 - **Animations.** Frames are pulled at the chosen rate through mediabunny's `CanvasSink` (which also crops and scales) and identical consecutive frames are merged into a longer delay. GIF: each frame gets its own 256-colour palette from gifenc. APNG and WebP: no browser has an encoder for either, so `animated.ts` writes the container itself and, after the first frame, stores only the rectangle that changed; APNG compresses with the browser's `CompressionStream`, WebP takes each rectangle from the canvas WebP encoder.
-- **Dependencies.** [mediabunny](https://mediabunny.dev) (MPL-2.0) for reading, writing and converting media; [gifenc](https://github.com/mattdesl/gifenc) (MIT) for GIF. Both are permissive, so Satori stays MIT.
+- **Fallback.** When the browser has no encoder for the chosen format, Satori asks before downloading ffmpeg.wasm's core from jsDelivr, runs it in a worker and reports progress from ffmpeg's own status lines. Cancelling kills the worker.
+- **Dependencies.** [mediabunny](https://mediabunny.dev) (MPL-2.0) for reading, writing and converting media; [gifenc](https://github.com/mattdesl/gifenc) (MIT) for GIF; [@ffmpeg/ffmpeg](https://github.com/ffmpegwasm/ffmpeg.wasm) (MIT) to drive the fallback. All three are permissive, so Satori stays MIT. The ffmpeg core itself includes GPL code (x264); it is never bundled, only downloaded by the browser when the user agrees.
 
 Development:
 
@@ -71,12 +73,6 @@ npm run build    # static site in dist/
 ```
 
 The `main` branch deploys to GitHub Pages through `.github/workflows/pages.yml`.
-
-<br/>
-
-## 🗺️ Roadmap
-
-- ffmpeg.wasm as an optional fallback for formats the browser cannot encode.
 
 <br/>
 

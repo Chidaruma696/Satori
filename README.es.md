@@ -39,7 +39,7 @@ El resultado muestra tamaño y duración, con **Descargar**, **Volver a editar**
 
 **Audio.** Cuando el navegador ofrece compartir el audio del sistema (Chrome y Edge en Windows y ChromeOS) se captura y se conserva en MP4 y WebM. Las animaciones no tienen sonido.
 
-**Navegadores.** Chrome, Edge y Safari de escritorio para todo menos el WebP animado, que el canvas de Safari no sabe escribir. Firefox graba y exporta WebM y las animaciones; el MP4 necesita un codificador H.264 que Firefox solo expone en algunos sistemas. Los teléfonos no pueden grabar su pantalla desde una página web.
+**Navegadores.** Chrome y Edge de escritorio lo hacen todo con sus propios codificadores. Firefox no tiene codificador MP4 en la mayoría de sistemas y Safari no sabe escribir WebP; para esos casos Satori ofrece descargar [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) (unos 32 MB, una vez: el navegador lo guarda) y codifica con él. Es más lento que los codificadores del navegador y su WebM es VP8. Los teléfonos no pueden grabar su pantalla desde una página web.
 
 <br/>
 
@@ -52,6 +52,7 @@ src/
 ├── export.ts     mediabunny: sondeo, remux (hace navegable la grabación recién hecha), conversión
 │                 MP4/WebM con recortes (WebCodecs), cuadros de las animaciones con CanvasSink
 ├── animated.ts   escritores de APNG y WebP animado (solo el rectángulo que cambia en cada cuadro)
+├── ffmpeg.ts     el respaldo: ffmpeg.wasm, que solo se descarga si al navegador le falta un codificador
 ├── preview.ts    el editor: reproducción dentro del recorte, deslizadores, recorte por arrastre, opciones
 ├── ui.ts         ayudantes de DOM, formato de tiempo y tamaño
 └── i18n.ts       inglés en el código, siete idiomas más desde tablas tipadas (sigue el idioma del navegador)
@@ -60,7 +61,8 @@ src/
 - **Sin framework.** DOM puro con un pequeño `el()`; cada estado pinta su propia vista.
 - **Primero remux.** Un archivo recién salido de `MediaRecorder` no tiene duración ni índice, así que `<video>` no puede desplazarse por él. Satori reescribe el contenedor una vez (copia los paquetes, no recodifica) y trabaja a partir de ahí.
 - **Animaciones.** Los cuadros se extraen a la tasa elegida con el `CanvasSink` de mediabunny (que además recorta y escala) y los cuadros consecutivos idénticos se funden en un retardo más largo. GIF: cada cuadro recibe su propia paleta de 256 colores con gifenc. APNG y WebP: ningún navegador trae codificador para ninguno de los dos, así que `animated.ts` escribe el contenedor él mismo y, después del primer cuadro, guarda solo el rectángulo que cambió; el APNG comprime con el `CompressionStream` del navegador y el WebP saca cada rectángulo del codificador WebP del canvas.
-- **Dependencias.** [mediabunny](https://mediabunny.dev) (MPL-2.0) para leer, escribir y convertir medios; [gifenc](https://github.com/mattdesl/gifenc) (MIT) para el GIF. Ambas son permisivas, así que Satori se queda en MIT.
+- **Respaldo.** Si el navegador no tiene codificador para el formato elegido, Satori pregunta antes de descargar el núcleo de ffmpeg.wasm desde jsDelivr, lo ejecuta en un worker y saca el progreso de las propias líneas de estado de ffmpeg. Cancelar mata el worker.
+- **Dependencias.** [mediabunny](https://mediabunny.dev) (MPL-2.0) para leer, escribir y convertir medios; [gifenc](https://github.com/mattdesl/gifenc) (MIT) para el GIF; [@ffmpeg/ffmpeg](https://github.com/ffmpegwasm/ffmpeg.wasm) (MIT) para manejar el respaldo. Las tres son permisivas, así que Satori se queda en MIT. El núcleo de ffmpeg sí lleva código GPL (x264): nunca va empaquetado, solo lo descarga el navegador cuando el usuario acepta.
 
 Desarrollo:
 
@@ -71,12 +73,6 @@ npm run build    # sitio estático en dist/
 ```
 
 La rama `main` se despliega en GitHub Pages con `.github/workflows/pages.yml`.
-
-<br/>
-
-## 🗺️ Hoja de ruta
-
-- ffmpeg.wasm como respaldo opcional para los formatos que el navegador no sepa codificar.
 
 <br/>
 
